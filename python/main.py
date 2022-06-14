@@ -1,10 +1,17 @@
+import re
 import os
 import json
 from subprocess import Popen, PIPE
 
 # get tigershark executable
-command = os.getcwd()+"/target/debug/tigershark"
+target="debug"
+# target="release"
 
+# until I figure out a proper fix...
+# pwd is different inside/outside of Neovim when using Git
+pwd = re.sub("/python","",os.getcwd())
+command = pwd+"/target/"+target+"/tigershark"
+print(">>" , command)
 
 # create some json for test
 myjson = {"name":"bob","some random stuff":433.34}
