@@ -27,15 +27,11 @@ struct Asset {
     source: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct DbInsert {
-    name: String,
-    version: u32,
-}
 // TO DO.
 // - connect to database .. sortof done > failure is not an Option, it's a Result!
-// - insert new document
-// - check latest version .. can find documents from ID
+// - insert new document .. works, but using doc! macro, should be using a Struct instead?
+// - check latest version .. can find documents from ID, need to create a version and increment
+// before using a dict instead
 // - increment version
 // - add dictionaries for versions instead of u32
 
@@ -56,11 +52,6 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
     }
 }
 
-
-
-
-
-// async fn main() {
 
 #[tokio::main]
 async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
@@ -88,32 +79,15 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
     let collection = db_connect().await;
 
-    // match collection{
-    //     Some(c) => let collection = collection.unwrap(),
-    //     None() => {
-    //         print!("Err: collection issue");
-    //         panic!();
-    //     }
-    // }
     // ugly TEMP thing...
-
     let coll:Collection<Document>;
 
     if collection.is_some(){
         coll = collection.unwrap();
     }else{
-        println!("Err: collection is None");
+        println!("Err: collection is None, nothing to do here.");
         panic!();
     }
-
-
-
-    // if collection.is_none(){
-    //     print!("Err: collection Empty:nothing to do");
-    // }else{
-    //     let collection = collection.unwrap();
-    // }
-    // println!("DB connected: {:?}" , db.unwrap());
 
     if asset.id.is_none() {
 
@@ -126,44 +100,37 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         };
 
          let insert_result = coll.insert_one(new_asset, None).await;
-         let version = 0;
 
          match insert_result {
              Ok(i) => {
-                 // of course, it could be easy but it ain't
+                 // get id as a string
                  let id :String = i.inserted_id.as_object_id().unwrap().to_hex();
-                 println!("insert result: {:?}",&i);
-                 println!("ID: {:?} ",&id);
+                 println!("{}",&id);
+                 panic!();
+                 // return ID and leave.
              },
              Err(e) => println!("Err: {:?}",e),
          }
 
     } else {
-       // check in the database for that asset
-       //
+         // eg: tigershark -i '{"id":"6278a87db06a9874bfa44660"}'
+         // check in the database for that asset
+         //
          let objid = ObjectId::parse_str(&asset.id.unwrap());
          let objid_:ObjectId;
          if objid.is_ok(){
 
              let cursor = coll.find_one(Some(doc! { "_id": &objid.unwrap() }), None).await;
              match cursor{
-                 Ok(c) => println!("{:?}",c),
+                 Ok(c) => {
+                     println!("document found: {:?}",c);
+                     // TODO: need to find the latest version now ...
+                 } ,
                  Err(c) => println!("id not found")
              }
-
          }else{
              print!("Obj ID not valid");
          }
 
-
-         // println!("objid : {:?}" , objid);
-         // println!("{:?}",cursor);
-       // asset ID not found
-
-        // print!("Asset ID: {} not found", asset.id);
-        // panic!();
-
-        // asset ID found,
-        // find the latest version.
     }
 }
