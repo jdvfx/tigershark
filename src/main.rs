@@ -63,14 +63,14 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
     let asset_result: serde_json::Result<Asset> = serde_json::from_str(&asset_str);
 
-    let asset: Asset;
-    match asset_result {
-        Ok(a) => asset = a,
+    // let asset: Asset;
+    let asset:Asset = match asset_result {
+        Ok(a) =>  a,
         Err(r) => {
             print!("Err: bad json format: {}", asset_str);
             panic!();
         }
-    }
+    };
 
     if asset.id.is_none() && asset.name.is_none() {
         print!("Err: 'id' and 'name' are None: nothing to do");
@@ -79,15 +79,14 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
     let collection = db_connect().await;
 
-    // ugly TEMP thing...
-    let coll:Collection<Document>;
-
-    if collection.is_some(){
-        coll = collection.unwrap();
+    // check collection is not empty
+    let coll:Collection<Document> = if collection.is_some(){
+        collection.unwrap()
     }else{
         println!("Err: collection is None, nothing to do here.");
         panic!();
-    }
+    };
+
 
     if asset.id.is_none() {
 
