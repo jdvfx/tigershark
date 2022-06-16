@@ -4,9 +4,10 @@ use clap::Parser;
 use futures::stream::TryStreamExt;
 use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
+use mongodb::results::InsertOneResult;
 use mongodb::{Client, Collection};
 use mongodb::{bson::doc, options::FindOptions};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Deserializer};
 use serde_json::{Error, Result};
 
 #[derive(Parser, Debug)]
@@ -26,10 +27,15 @@ struct Asset {
     source: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct DbInsert {
+    name: String,
+    version: u32,
+}
 // TO DO.
 // - connect to database .. sortof done > failure is not an Option, it's a Result!
 // - insert new document
-// - check latest version
+// - check latest version .. can find documents from ID
 // - increment version
 // - add dictionaries for versions instead of u32
 
@@ -49,6 +55,9 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
         Err(e) => None
     }
 }
+
+
+
 
 
 // async fn main() {
@@ -107,21 +116,32 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
     // println!("DB connected: {:?}" , db.unwrap());
 
     if asset.id.is_none() {
-        //create new asset, set version to 1
-        //return asset
 
-        // we checked above that is asset.name isn't none, OK to unwrap it.
-        let new_asset = Asset {
-            name: Some(asset.name.unwrap()),
-            id: Some(123.to_string()),
-            version: Some(1),
-            source: None,
+        //eg: tigershark -i '{"name":"jessie pinkman"}'
+
+        let version:u32 = 1;
+        let new_asset = doc!{
+            "name":asset.name.unwrap(),
+            "version":version,
         };
-        print!("{:?}", new_asset);
+
+         let insert_result = coll.insert_one(new_asset, None).await;
+         let version = 0;
+
+         match insert_result {
+             Ok(i) => {
+                 // of course, it could be easy but it ain't
+                 let id :String = i.inserted_id.as_object_id().unwrap().to_hex();
+                 println!("insert result: {:?}",&i);
+                 println!("ID: {:?} ",&id);
+             },
+             Err(e) => println!("Err: {:?}",e),
+         }
+
     } else {
        // check in the database for that asset
        //
-         let objid = mongodb::bson::oid::ObjectId::parse_str(&asset.id.unwrap());
+         let objid = ObjectId::parse_str(&asset.id.unwrap());
          let objid_:ObjectId;
          if objid.is_ok(){
 
