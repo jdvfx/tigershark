@@ -4,7 +4,7 @@ use clap::Parser;
 use futures::stream::TryStreamExt;
 use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
-use mongodb::Client;
+use mongodb::{Client, Collection};
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{Error, Result};
@@ -21,24 +21,20 @@ struct Args {
 #[derive(Debug, Serialize, Deserialize)]
 struct Asset {
     name: Option<String>,
-    id: Option<u32>,
+    id: Option<String>,
     version: Option<u32>,
     source: Option<String>,
 }
 
-
-
 // TO DO.
-// - connect to database
+// - connect to database .. sortof done > failure is not an Option, it's a Result!
 // - insert new document
 // - check latest version
 // - increment version
 // - add dictionaries for versions instead of u32
 
 
-
-
-// for nowm, returns Collection as an option (should be a result)
+// for now, returns Collection as an option (should be a result)
 async fn db_connect() -> Option<mongodb::Collection<Document>>{
 
     let uri = "mongodb://localhost:27017";
@@ -48,13 +44,11 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
         Ok(c) =>{
             let database = c.database("gusfring");
             let collection: mongodb::Collection<Document> = database.collection("chicken");
-            println!(">> {:?}", collection);
             Some(collection)
         },
         Err(e) => None
     }
 }
-
 
 
 // async fn main() {
@@ -83,8 +77,34 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         panic!();
     }
 
-    let db = db_connect().await;
-    println!("DB connected: {:?}" , db.unwrap());
+    let collection = db_connect().await;
+
+    // match collection{
+    //     Some(c) => let collection = collection.unwrap(),
+    //     None() => {
+    //         print!("Err: collection issue");
+    //         panic!();
+    //     }
+    // }
+    // ugly TEMP thing...
+
+    let coll:Collection<Document>;
+
+    if collection.is_some(){
+        coll = collection.unwrap();
+    }else{
+        println!("Err: collection is None");
+        panic!();
+    }
+
+
+
+    // if collection.is_none(){
+    //     print!("Err: collection Empty:nothing to do");
+    // }else{
+    //     let collection = collection.unwrap();
+    // }
+    // println!("DB connected: {:?}" , db.unwrap());
 
     if asset.id.is_none() {
         //create new asset, set version to 1
@@ -93,15 +113,32 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         // we checked above that is asset.name isn't none, OK to unwrap it.
         let new_asset = Asset {
             name: Some(asset.name.unwrap()),
-            id: Some(123),
+            id: Some(123.to_string()),
             version: Some(1),
             source: None,
         };
         print!("{:?}", new_asset);
     } else {
-        // check in the database for that asset
+       // check in the database for that asset
+       //
+         let objid = mongodb::bson::oid::ObjectId::parse_str(&asset.id.unwrap());
+         let objid_:ObjectId;
+         if objid.is_ok(){
 
-        // asset ID not found
+             let cursor = coll.find_one(Some(doc! { "_id": &objid.unwrap() }), None).await;
+             match cursor{
+                 Ok(c) => println!("{:?}",c),
+                 Err(c) => println!("id not found")
+             }
+
+         }else{
+             print!("Obj ID not valid");
+         }
+
+
+         // println!("objid : {:?}" , objid);
+         // println!("{:?}",cursor);
+       // asset ID not found
 
         // print!("Asset ID: {} not found", asset.id);
         // panic!();
