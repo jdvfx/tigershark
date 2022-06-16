@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 
 use clap::Parser;
+use futures::stream::TryStreamExt;
+use mongodb::bson::oid::ObjectId;
+use mongodb::Client;
+use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{Error, Result};
 
@@ -18,8 +22,23 @@ struct Asset {
     name: Option<String>,
     id: Option<u32>,
     version: Option<u32>,
+    source: Option<String>,
 }
 
+
+
+// TO DO.
+// - connect to database
+// - insert new document
+// - check latest version
+// - increment version
+// - add dictionaries for versions instead of u32
+
+
+
+
+// #[tokio::main]
+// async fn main() {
 fn main() {
     let args = Args::parse();
 
@@ -51,6 +70,7 @@ fn main() {
             name: Some(asset.name.unwrap()),
             id: Some(123),
             version: Some(1),
+            source: None,
         };
         print!("{:?}", new_asset);
     } else {
