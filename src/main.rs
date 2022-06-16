@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 
+use std::process::exit;
 use clap::Parser;
 use futures::stream::TryStreamExt;
 use mongodb::bson::Document;
@@ -105,8 +106,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
                  // get id as a string
                  let id :String = i.inserted_id.as_object_id().unwrap().to_hex();
                  println!("{}",&id);
-                 panic!();
-                 // return ID and leave.
+                 exit(0); // exit nicely!
              },
              Err(e) => println!("Err: {:?}",e),
          }
@@ -123,6 +123,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
              match cursor{
                  Ok(c) => {
                      println!("document found: {:?}",c);
+                     exit(0); // nice exit!
                      // TODO: need to find the latest version now ...
                  } ,
                  Err(c) => println!("id not found")
