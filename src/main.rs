@@ -2,6 +2,7 @@
 
 use clap::Parser;
 use futures::stream::TryStreamExt;
+use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Client;
 use mongodb::{bson::doc, options::FindOptions};
@@ -37,9 +38,30 @@ struct Asset {
 
 
 
-// #[tokio::main]
+// for nowm, returns Collection as an option (should be a result)
+async fn db_connect() -> Option<mongodb::Collection<Document>>{
+
+    let uri = "mongodb://localhost:27017";
+    let client = Client::with_uri_str(uri).await;
+
+    match client{
+        Ok(c) =>{
+            let database = c.database("gusfring");
+            let collection: mongodb::Collection<Document> = database.collection("chicken");
+            println!(">> {:?}", collection);
+            Some(collection)
+        },
+        Err(e) => None
+    }
+}
+
+
+
 // async fn main() {
-fn main() {
+
+#[tokio::main]
+async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
+// fn main() {
     let args = Args::parse();
 
     // get the insert args ("the asset to insert into the DB")
@@ -60,6 +82,9 @@ fn main() {
         print!("Err: 'id' and 'name' are None: nothing to do");
         panic!();
     }
+
+    let db = db_connect().await;
+    println!("DB connected: {:?}" , db.unwrap());
 
     if asset.id.is_none() {
         //create new asset, set version to 1
