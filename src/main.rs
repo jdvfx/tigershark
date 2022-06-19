@@ -19,9 +19,9 @@ struct Args {
     insert: String,
 }
 
-// most basic asset format, name, id (from DB), version
+// for CLAP de-serialize
 #[derive(Debug, Serialize, Deserialize)]
-struct Asset {
+struct Insert {
     name: Option<String>,
     id: Option<String>,
     version: Option<u32>,
@@ -35,6 +35,18 @@ struct Asset {
 // before using a dict instead
 // - increment version
 // - add dictionaries for versions instead of u32
+
+
+// for bson
+#[derive(Serialize, Deserialize)]
+struct AssetVersion {
+    version: u32,
+    source: String,
+    approved: bool,
+    status: u32,
+}
+
+
 
 
 // for now, returns Collection as an option (should be a result)
@@ -56,24 +68,23 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
 
 #[tokio::main]
 async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
-// fn main() {
+
     let args = Args::parse();
 
     // get the insert args ("the asset to insert into the DB")
-    let asset_str = args.insert.to_string();
-
-    let asset_result: serde_json::Result<Asset> = serde_json::from_str(&asset_str);
+    let insert_str = args.insert.to_string();
+    let insert_result: serde_json::Result<Insert> = serde_json::from_str(&insert_str);
 
     // let asset: Asset;
-    let asset:Asset = match asset_result {
+    let insert:Insert = match insert_result {
         Ok(a) =>  a,
         Err(r) => {
-            print!("Err: bad json format: {}", asset_str);
+            print!("Err: bad json format: {}", insert_str);
             panic!();
         }
     };
 
-    if asset.id.is_none() && asset.name.is_none() {
+    if insert.id.is_none() && insert.name.is_none() {
         print!("Err: 'id' and 'name' are None: nothing to do");
         panic!();
     }
@@ -89,13 +100,16 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
     };
 
 
-    if asset.id.is_none() {
+    if insert.id.is_none() {
 
-        //eg: tigershark -i '{"name":"jessie pinkman"}'
+        // eg: tigershark -i '{"name":"jessie pinkman"}'
+        // need to provide source_scene as well
+        //
+        //
 
         let version:u32 = 1;
         let new_asset = doc!{
-            "name":asset.name.unwrap(),
+            "name":insert.name.unwrap(),
             "version":version,
         };
 
@@ -115,7 +129,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
          // eg: tigershark -i '{"id":"6278a87db06a9874bfa44660"}'
          // check in the database for that asset
          //
-         let objid = ObjectId::parse_str(&asset.id.unwrap());
+         let objid = ObjectId::parse_str(&insert.id.unwrap());
          let objid_:ObjectId;
          if objid.is_ok(){
 
