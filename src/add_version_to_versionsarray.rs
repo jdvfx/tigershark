@@ -61,7 +61,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
              // update the versions. --- there's probably a cleaner way of doing that no?
              // like adding a new element to an array directly, without copying everything back in
-             // for now this is "working"
+             //
+             // >>> look at $push instead of $set:
+             // https://kb.objectrocket.com/mongo-db/how-to-add-elements-into-an-array-in-mongodb-1195
              // ...
             let db_update_result = collection.update_one(
               doc! { "_id": id.as_ref().unwrap()},
