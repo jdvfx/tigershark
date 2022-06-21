@@ -1,15 +1,21 @@
-#![allow(dead_code, unused_variables, unused_imports)]
 
+// use mongodb::{
+    // options::{ClientOptions, UpdateOptions},
+//     Client,
+// };
+// use futures::stream::TryStreamExt;
+// use serde_json::{Error, Result};
+// use mongodb::{bson::doc, bson::Document, options::FindOptions};
+// use serde::{Deserialize, Serialize, Deserializer};
+// use mongodb::results::InsertOneResult;
+
+use bson::{bson, Bson};
 use std::process::exit;
 use clap::Parser;
-use futures::stream::TryStreamExt;
-use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
-use mongodb::results::InsertOneResult;
 use mongodb::{Client, Collection};
-use mongodb::{bson::doc, options::FindOptions};
-use serde::{Deserialize, Serialize, Deserializer};
-use serde_json::{Error, Result};
+use mongodb::{bson::doc, bson::Document};
+use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -29,25 +35,17 @@ struct Insert {
 }
 
 // TO DO.
-// - connect to database .. sortof done > failure is not an Option, it's a Result!
-// - insert new document .. works, but using doc! macro, should be using a Struct instead?
-// - check latest version .. can find documents from ID, need to create a version and increment
-// before using a dict instead
-// - increment version
-// - add dictionaries for versions instead of u32
+// - connect to database .. ok but failure is not an Option, it's a Result!
 
 
 // for bson
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct AssetVersion {
     version: u32,
     source: String,
     approved: bool,
     status: u32,
 }
-
-
-
 
 // for now, returns Collection as an option (should be a result)
 async fn db_connect() -> Option<mongodb::Collection<Document>>{
@@ -61,7 +59,7 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
             let collection: mongodb::Collection<Document> = database.collection("chicken");
             Some(collection)
         },
-        Err(e) => None
+        Err(_e) => None
     }
 }
 
@@ -79,7 +77,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
     let insert:Insert = match insert_result {
         Ok(a) =>  a,
         Err(r) => {
-            print!("Err: bad json format: {}", insert_str);
+            print!("Err: bad json format: {} : {:?}", insert_str, r);
             panic!();
         }
     };
@@ -104,13 +102,25 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
         // eg: tigershark -i '{"name":"jessie pinkman"}'
         // need to provide source_scene as well
-        //
-        //
 
-        let version:u32 = 1;
+        let first_version: Bson = bson!({
+            "version": 1,
+            "source":"should be provided as CLI arg",
+            "approved":false,
+            "status":0,
+        });
+        // create Bson vector and convert to array
+        let versions_array = Bson::Array(vec![first_version]);
+
+        // let mut versions_vec: Vec<Bson> = Vec::new();
+        // versions_vec.push(first_version);
+        // let versions_array = bson::to_bson(&versions_vec).unwrap();
+
         let new_asset = doc!{
             "name":insert.name.unwrap(),
-            "version":version,
+            "latest_approved":0,
+            "latest_version":1,
+            "versions":versions_array,
         };
 
          let insert_result = coll.insert_one(new_asset, None).await;
@@ -127,24 +137,57 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
     } else {
          // eg: tigershark -i '{"id":"6278a87db06a9874bfa44660"}'
-         // check in the database for that asset
-         //
-         let objid = ObjectId::parse_str(&insert.id.unwrap());
-         let objid_:ObjectId;
-         if objid.is_ok(){
+         // check ID in the database for that asset
 
-             let cursor = coll.find_one(Some(doc! { "_id": &objid.unwrap() }), None).await;
-             match cursor{
-                 Ok(c) => {
-                     println!("document found: {:?}",c);
-                     exit(0); // nice exit!
-                     // TODO: need to find the latest version now ...
-                 } ,
-                 Err(c) => println!("id not found")
-             }
-         }else{
-             print!("Obj ID not valid");
-         }
+        let objid = ObjectId::parse_str(&insert.id.unwrap());
+        if objid.is_err(){
+            println!("id invalid: {:?}",&objid);
+            panic!();
+        }
+
+        // find doc from ID
+        let cursor = coll.find_one(Some(doc! { "_id": &objid.as_ref().unwrap() }), None).await;
+
+        match cursor{
+             Ok(c) => {
+
+                let latest_version = c.as_ref().unwrap().get_i32("latest_version");
+                if latest_version.is_err(){
+                    println!("fail to parse 'latest_version'");
+                    panic!();
+                }
+
+                let new_version_num = latest_version.unwrap() + 1;
+
+                let new_version: Bson = bson!({
+                    "version": new_version_num,
+                    "source":"should be provided as CLI arg",
+                    "approved":false,
+                    "status":0,
+                });
+
+                let db_update_result = coll.update_one(
+                  doc! { "_id": objid.as_ref().unwrap()},
+                  doc! { "$push": { "versions": &new_version }, "$set": {"latest_version": &new_version_num  } },
+                      None,
+                  )
+                  .await;
+                    //
+                match db_update_result{
+                    Ok(r) => {
+                        match r.matched_count{
+                            0 => println!("ID not found, how is that even possible?! : {}", objid.as_ref().unwrap()),
+                            _ => println!("updated {:?}",r),
+                        }
+                    },
+                    Err(e) => println!("Error updating, something is really messed up: {:?}",e)
+                }
+             } ,
+             Err(c) => {
+                 println!("ID not found: {:?}",c);
+                 panic!();
+                }
+        }
 
     }
 }
