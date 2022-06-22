@@ -31,7 +31,7 @@ struct Insert {
     name: Option<String>,
     id: Option<String>,
     version: Option<u32>,
-    source: Option<String>,
+    source: String,
 }
 
 // TO DO.
@@ -82,6 +82,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+
     if insert.id.is_none() && insert.name.is_none() {
         print!("Err: 'id' and 'name' are None: nothing to do");
         panic!();
@@ -97,15 +98,16 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         panic!();
     };
 
+    // let src = insert.source;
 
     if insert.id.is_none() {
 
-        // eg: tigershark -i '{"name":"jessie pinkman"}'
-        // need to provide source_scene as well
+        // eg: tigershark -i '{"name":"my_3d_asset","source":"my_source_file.hip"}'
+        // source file is REQUIRED.
 
         let first_version: Bson = bson!({
             "version": 1,
-            "source":"should be provided as CLI arg",
+            "source":&insert.source,
             "approved":false,
             "status":0,
         });
@@ -161,7 +163,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
                 let new_version: Bson = bson!({
                     "version": new_version_num,
-                    "source":"should be provided as CLI arg",
+                    "source":&insert.source,
                     "approved":false,
                     "status":0,
                 });
