@@ -8,8 +8,8 @@ from subprocess import Popen, PIPE
 
 
 # get tigershark executable
-# target="debug"
-target="release"
+target="debug"
+# target="release"
 
 # for now the Rust executable path is hard-coded...
 pwd = "/home/bunker/projects/tigershark/target/"
