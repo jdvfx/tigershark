@@ -32,6 +32,7 @@ struct Insert {
     id: Option<String>,
     version: Option<u32>,
     source: String,
+    datapath: String,
 }
 
 // TO DO.
@@ -108,6 +109,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         let first_version: Bson = bson!({
             "version": 1,
             "source":&insert.source,
+            "datapath:":&insert.datapath,
             "approved":false,
             "status":0,
         });
@@ -164,6 +166,7 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
                 let new_version: Bson = bson!({
                     "version": new_version_num,
                     "source":&insert.source,
+                    "datapath:":&insert.datapath,
                     "approved":false,
                     "status":0,
                 });
