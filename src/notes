@@ -1,0 +1,22 @@
+
+
+
+get_args (clap)
+
+connect_to_db (mongodb)
+
+
+
+
+(C)
+get_source(datapath) -> source file
+
+(R)
+create(name,source,datapath) -> objID (json)
+
+(U)
+update(id,source,datapath) -> json
+
+(D)
+delete(id) -> json
+// mark for 'deletion', update status

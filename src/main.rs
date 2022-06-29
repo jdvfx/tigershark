@@ -35,10 +35,6 @@ struct Insert {
     datapath: String,
 }
 
-// TO DO.
-// - connect to database .. ok but failure is not an Option, it's a Result!
-
-
 // for bson
 #[derive(Debug, Serialize, Deserialize)]
 struct AssetVersion {
@@ -48,6 +44,8 @@ struct AssetVersion {
     status: u32,
 }
 
+// TO DO.
+// - connect to database .. ok but failure is not an Option, it's a Result!
 // for now, returns Collection as an option (should be a result)
 async fn db_connect() -> Option<mongodb::Collection<Document>>{
 
@@ -68,6 +66,8 @@ async fn db_connect() -> Option<mongodb::Collection<Document>>{
 #[tokio::main]
 async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
 
+
+// --- check args --- START
     let args = Args::parse();
 
     // get the insert args ("the asset to insert into the DB")
@@ -83,12 +83,13 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-
     if insert.id.is_none() && insert.name.is_none() {
         print!("Err: 'id' and 'name' are None: nothing to do");
         panic!();
     }
+// --- check args --- END
 
+// --- connect to DB --- START
     let collection = db_connect().await;
 
     // check collection is not empty
@@ -98,13 +99,18 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         println!("Err: collection is None, nothing to do here.");
         panic!();
     };
+// --- connect to DB --- END
 
-    // let src = insert.source;
 
+// --- Create Asset --- START
     if insert.id.is_none() {
 
-        // eg: tigershark -i '{"name":"my_3d_asset","source":"my_source_file.hip"}'
-        // source file is REQUIRED.
+        // eg: tigershark -i
+        // '{
+        // "name":"my_3d_asset",
+        // "source":"my_source_file.hip",
+        // "datapath":"my/data/path"
+        // }'
 
         let first_version: Bson = bson!({
             "version": 1,
@@ -138,7 +144,8 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
              },
              Err(e) => println!("Err: {:?}",e),
          }
-
+// --- Create Asset --- END
+// --- Update Asset --- START
     } else {
          // eg: tigershark -i '{"id":"6278a87db06a9874bfa44660"}'
          // check ID in the database for that asset
@@ -195,4 +202,5 @@ async fn main() {//-> Result<(), Box<dyn std::error::Error>> {
         }
 
     }
+// --- Update Asset --- END
 }
